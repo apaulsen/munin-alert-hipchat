@@ -1,0 +1,2 @@
+localhost :: localdomain :: Inode table usage
+        CRITICALs: open inodes is 32046.00 (outside range [:6]).

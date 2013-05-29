@@ -56,13 +56,15 @@ my $HIPCHAT_FROM = 'Munin';
 my $HIPCHAT_ROOM = '';
 my $HIPCHAT_TOKEN = '';
 my $MUNIN_URL_PREFIX = '';
+my @MENTION = ();
 
 # Fetch the command line arguments
 &usage unless GetOptions(
     'from=s' => \$HIPCHAT_FROM,
     'room=s' => \$HIPCHAT_ROOM,
     'token=s' => \$HIPCHAT_TOKEN,
-    'munin-prefix=s' => \$MUNIN_URL_PREFIX
+    'munin-prefix=s' => \$MUNIN_URL_PREFIX,
+    'mention=s' => \@MENTION
 );
 
 # Enforce the mandatory arguments
@@ -84,7 +86,7 @@ my @alerts = split /(?:\r\n|\r|\n){2}/o, $alert_data;
 if (@alerts) {
     my $hipchat = new LWP::UserAgent();
     foreach (@alerts) {
-        &send_to_hipchat($hipchat, &format_for_hipchat($_));
+        &send_to_hipchat($hipchat, &format_for_hipchat($_), \@MENTION);
     }
 }
 
@@ -150,6 +152,7 @@ sub format_for_hipchat {
 sub send_to_hipchat {
     my $hipchat = shift;
     my $alert = shift;
+    my $mention = shift;
 
     $alert->{'room_id'} = $HIPCHAT_ROOM;
     $alert->{'from'} = $HIPCHAT_FROM;
@@ -157,10 +160,22 @@ sub send_to_hipchat {
 
     my $req = POST "https://api.hipchat.com/v1/rooms/message?format=json&auth_token=$HIPCHAT_TOKEN", $alert;
     $hipchat->request($req);
+
+    if (@$mention) {
+        my $footer = ();
+        $footer->{'message'} = '@' . join(' @', @$mention);
+        $footer->{'message_format'} = 'text';
+        $footer->{'room_id'} = $HIPCHAT_ROOM;
+        $footer->{'from'} = $HIPCHAT_FROM;
+        $footer->{'notify'} = 1;
+        $footer->{'color'} = $alert->{'color'};
+        $req = POST "https://api.hipchat.com/v1/rooms/message?format=json&auth_token=$HIPCHAT_TOKEN", $footer;
+        $hipchat->request($req);
+    }
 }
 
 # Print out a usage message.
 sub usage {
-    print "Usage: $0 [--from=Munin] --room=Room --token=1234abcd [--munin-prefix=https://munin.foo.com]\n";
+    print "Usage: $0 [--from=Munin] --room=Room --token=1234abcd [--munin-prefix=https://munin.foo.com] [--mention=MENTION]\n";
     exit(0);
 }

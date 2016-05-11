@@ -57,6 +57,7 @@ my $HIPCHAT_ROOM = '';
 my $HIPCHAT_TOKEN = '';
 my $MUNIN_URL_PREFIX = '';
 my @MENTION = ();
+my $PROXY = '';
 
 # Fetch the command line arguments
 &usage unless GetOptions(
@@ -64,7 +65,8 @@ my @MENTION = ();
     'room=s' => \$HIPCHAT_ROOM,
     'token=s' => \$HIPCHAT_TOKEN,
     'munin-prefix=s' => \$MUNIN_URL_PREFIX,
-    'mention=s' => \@MENTION
+    'mention=s' => \@MENTION,
+    'proxy=s' => \$PROXY
 );
 
 # Enforce the mandatory arguments
@@ -85,6 +87,11 @@ while (<STDIN>) {
 my @alerts = split /(?:\r\n|\r|\n){2}/o, $alert_data;
 if (@alerts) {
     my $hipchat = new LWP::UserAgent();
+    
+    if ($PROXY) {
+        $hipchat->proxy(['https','http'], $PROXY);
+    }
+
     foreach (@alerts) {
         &send_to_hipchat($hipchat, &format_for_hipchat($_), \@MENTION);
     }
